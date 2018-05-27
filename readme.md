@@ -1,4 +1,4 @@
-# Colored tweets - Twitter stream
+# Twter - Twitter stream 4 Colored tweets
 
 ## Introduction
 
