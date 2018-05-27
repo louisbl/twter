@@ -8,6 +8,7 @@
 
 > Pour lancer l'application vous devez télécharger le projet, le placer où vous le souhaitez puis lancer les commandes :
 >> npm install
+>
 >> npm start
 >
 > Pour finir, accéder à l'application depuis votre navigateur à l'adresse http://localhost:5000.
