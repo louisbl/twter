@@ -1,0 +1,180 @@
+<html>
+
+<head>
+	<style>
+	* { margin: 0; padding: 0; text-transform: uppercase; font-family: system-ui; font-size: 22px; color: #464646; text-align: center; background: #212121; color: #FAFAFA; }
+	.color { width: calc(100% / 8); padding-bottom: calc(100% / 8); height: 0;  display: inline-block; }
+	#groups { display: flex; max-width: 100%; max-height: 100%;  }
+	#groups h1 {min-width: 100px; align-self: center; margin-top: 25px; margin-bottom: 25px; min-height: 60px; }
+	.number { margin-bottom: 25px; display: block;  }
+	.columns { min-width: calc(100% / 4); display: flex; flex-direction: column; }
+	.group { text-align: left; display: flex; flex-wrap: wrap;  }
+	.color { border: 1px solid transparent; position: relative; z-index: 0; transition: .2s;  }
+	.info { position: absolute; top: -100px; left: -100px; opacity: 0; z-index: 1; width: 250px; height: 250px; pointer-events: none; transform: scale(.8); transition: .2s; }
+	.info img { width: 100%; height: 100%; }
+	.color:hover .info { display: block; transform: scale(1); transition: .2s; opacity: 1; }
+	.search { margin-top: 20px; }
+	.search input { padding: 10px; text-transform: none; border: 2px solid #FAFAFA; border-radius: 2px; text-align: left; }
+	.search span { width: 100%; display: block; text-transform: none; margin-top: 15px; }
+	body { overflow-x: hidden; }
+	canvas { display: none; }
+</style>
+</head>
+
+<body>
+	<div class="search">
+		<input type="text" id="searchTerms" name="searchTerms"/>
+		<input type="submit" onclick="submit()" name="Envoyer"/>
+		<span></span>
+	</div>
+	<div id="groups">
+		<div class="columns" id="neutral_colors">
+			<h1>Neutral colors</h1>
+			<span class="number"></span>
+			<div class="group"></div>
+		</div>
+
+		<div class="columns" id="red_colors">
+			<h1>Red based colors</h1>
+			<span class="number"></span>
+			<div class="group"></div>
+		</div>
+
+		<div class="columns" id="green_colors">
+			<h1>Green based colors</h1>
+			<span class="number"></span>
+			<div class="group"></div>
+		</div>
+
+		<div class="columns" id="blue_colors">
+			<h1>Blue based colors</h1>
+			<span class="number"></span>
+			<div class="group"></div>
+		</div>
+	</div>
+</body>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.0.1/color-thief.min.js"></script>
+<script>
+	var socket = io('http://localhost:5000');
+	var body = document.querySelector('body')
+
+	var neutral_colors = document.querySelector('div#neutral_colors .group');
+	var neutral_number_div = document.querySelector('div#neutral_colors .number')
+	var neutral_number = 0;
+
+	var red_colors = document.querySelector('div#red_colors .group');
+	var red_number_div = document.querySelector('div#red_colors .number');
+	var red_number = 0;
+
+	var green_colors = document.querySelector('div#green_colors .group');
+	var green_number_div = document.querySelector('div#green_colors .number');
+	var green_number = 0;
+
+	var blue_colors = document.querySelector('div#blue_colors .group');
+	var blue_number_div = document.querySelector('div#blue_colors .number');
+	var blue_number = 0;
+
+	socket.on('connected', function (data) {
+	});
+
+	socket.on('tweet', function(data){
+		if(typeof data.user != 'undefined') {
+			var a = document.createElement('a');
+			var img = document.createElement('img');
+
+			img.crossOrigin = "Anonymous";
+			img.src = data.user.profile_image_url.replace('_normal', '')
+
+			img.onload  = function(){
+
+				if (img.width != 0){
+					var colorThief = new ColorThief();
+
+					var color = colorThief.getColor(img);
+
+					var r 	= color[0];
+					var g 	= color[1];
+					var b 	= color[2];
+
+					var is_neutral 	= r > (g - 30) && r < (g + 30) && g > (b - 30) && g < (b + 30); 
+					var is_red 		= r >= g && r >= b;
+					var is_green 	= g >= r && g >= b;
+					var is_blue 	= b >= r && b >= r;
+
+					if 	(is_neutral) { 
+						neutral_colors.append(a); 
+						neutral_number++; 
+						displayNumber(neutral_number_div, neutral_number)
+					} else if (is_red) { 
+						red_colors.append(a);
+						red_number++; 
+						displayNumber(red_number_div, red_number) 
+					} else if (is_green) {
+						green_colors.append(a); 
+						green_number++; 
+						displayNumber(green_number_div, green_number)
+					} else if (is_blue) { 
+						blue_colors.append(a);
+						blue_number++; 
+						displayNumber(blue_number_div, blue_number) 
+					}
+
+					img.classList.add("info");
+
+					a.style.backgroundColor = "rgb("+r+", "+g+", "+b+")";
+					a.href = "https://twitter.com/statuses/"+data.id_str
+					a.target = "_blank"
+					a.classList.add("color");
+					a.append(img)
+				}
+			}
+		}
+
+	});
+
+	socket.on('error', function(error){
+		console.log(error.source)
+		var string = error.source
+		var span = document.querySelector('.search span')
+		if(span.innerHTML == ''){
+			span.innerHTML = string
+		}
+	})
+
+	function submit(){
+		var test = document.querySelector('#searchTerms');
+		var span = document.querySelector('.search span')
+		if(test != "") {
+			span.innerHTML = '';
+			socket.emit('changeSearchTerms', test.value);
+
+			setTimeout(function(){
+
+				neutral_number = 0;
+				neutral_number_div.innerHTML = '';
+				neutral_colors.innerHTML = '';
+
+				red_number = 0;
+				red_number_div.innerHTML = '';
+				red_colors.innerHTML = '';
+
+				green_number = 0;
+				green_number_div.innerHTML = '';
+				green_colors.innerHTML = '';
+
+				blue_number = 0;
+				blue_number_div.innerHTML = '';
+				blue_colors.innerHTML = '';
+			}, 500)
+		}
+	}
+
+	function displayNumber(div, number){
+		div.innerHTML = ''
+		div.append(number)
+	}
+
+</script>
+</html> 
